@@ -115,7 +115,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	}
 }
 
-var validPath = regexp.MustCompile("^/(edit|save|view|use|list)/([a-zA-Z0-9]*)$")
+var validPath = regexp.MustCompile("^/(edit|save|view|use|list|headers)/([a-zA-Z0-9]*)$")
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +128,29 @@ func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.Handl
 	}
 }
 
+func headersHandler(w http.ResponseWriter, r *http.Request, title string) {
+	f, err := os.Open(filePath(title))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+	c, err := ioutil.ReadAll(f)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var headers map[string]string
+	json.Unmarshal(c, &headers)
+	for header, value := range headers {
+		w.Header().Set(header, value)
+	}
+	reqHeaders, err := json.Marshal(r.Header)
+	w.Header().Set("x-req-hdrs", string(reqHeaders))
+}
+
 func main() {
+	http.HandleFunc("/headers/", makeHandler(headersHandler))
 	http.HandleFunc("/view/", makeHandler(viewHandler))
 	http.HandleFunc("/edit/", makeHandler(editHandler))
 	http.HandleFunc("/save/", makeHandler(saveHandler))
