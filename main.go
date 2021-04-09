@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 )
 
 type Page struct {
@@ -82,7 +83,14 @@ func useHandler(w http.ResponseWriter, r *http.Request, title string) {
 	for header, value := range headers {
 		w.Header().Set(header, value)
 	}
-	w.Write(c)
+	w.Write([]byte("request headers:\n\n"))
+	for h, v := range r.Header {
+		w.Write([]byte(fmt.Sprintf("%s: %s\n", h, strings.Join(v, ","))))
+	}
+	w.Write([]byte("\n\nadded response headers:\n\n"))
+	for h, v := range headers {
+		w.Write([]byte(fmt.Sprintf("%s: %s\n", h, v)))
+	}
 }
 
 func listHandler(w http.ResponseWriter, r *http.Request, _ string) {
