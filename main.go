@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -115,7 +116,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	}
 }
 
-var validPath = regexp.MustCompile("^/(edit|save|view|use|list|headers)/([a-zA-Z0-9]*)$")
+var validPath = regexp.MustCompile("^/(edit|save|view|use|list|headers|error)/([a-zA-Z0-9]*)$")
 
 func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +150,14 @@ func headersHandler(w http.ResponseWriter, r *http.Request, title string) {
 	w.Header().Set("x-req-hdrs", string(reqHeaders))
 }
 
+func errorReturnHandler(w http.ResponseWriter, r *http.Request, code string) {
+	if c, err := strconv.Atoi(code); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	} else {
+		http.Error(w, fmt.Sprintf("error requested: %s", code), c)
+	}
+}
+
 func main() {
 	http.HandleFunc("/headers/", makeHandler(headersHandler))
 	http.HandleFunc("/view/", makeHandler(viewHandler))
@@ -156,6 +165,7 @@ func main() {
 	http.HandleFunc("/save/", makeHandler(saveHandler))
 	http.HandleFunc("/use/", makeHandler(useHandler))
 	http.HandleFunc("/list/", makeHandler(listHandler))
+	http.HandleFunc("/error/", makeHandler(errorReturnHandler))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
